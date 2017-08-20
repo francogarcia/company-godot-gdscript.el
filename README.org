@@ -122,7 +122,7 @@ may also use ~C-M-s~ to filter candidates whilst searching.
 
 #+BEGIN_SRC emacs-lisp
 ;; Author: Franco Eusébio Garcia <francogarcia@protonmail.com>
-;; URL: https://github.com/francogarcia/godot-gdscript.el
+;; URL: https://github.com/francogarcia/company-godot-gdscript.el
 ;; Version: 0.0.1
 ;; Keywords: godot game engine company
 #+END_SRC
