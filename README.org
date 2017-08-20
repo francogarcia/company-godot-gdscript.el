@@ -4,7 +4,7 @@
 
 * Introduction
 
-This is the auto-complete companion for [[https://github.com/francogarcia/godot-gdscript.e][Emacs' Godot GDScript major mode]].
+This is the auto-complete companion for [[https://github.com/francogarcia/godot-gdscript.el][Emacs' Godot GDScript major mode]].
 Auto-completion provides completion for variables, functions, node paths, and
 input actions using Company-mode. To use it, however, you need to compile Godot
 from the source code with [[https://github.com/neikeq/gd-autocomplete-service][gd-autocomplete-service]] support, and have Curl
