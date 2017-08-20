@@ -1,4 +1,4 @@
-;;; company-godot-gdscript.el --- Company back-end for Godot GDScript completion.
+;;; company-godot-gdscript.el --- Company back-end for Godot GDScript completion
 
 ;; Copyright (C) 2016--2017 Franco Eusébio Garcia
 
@@ -124,6 +124,7 @@ on which to ask for completion."
                     (file-relative-name
                      (file-name-nondirectory
                       buffer-file-name) (company-godot-gdscript-find-project-configuration))))
+        (buffer-content (current-buffer))
         ;; TODO: Account for narrowing.
         (cursor-line (1- (line-number-at-pos)))
         (cursor-column (current-column))
@@ -259,7 +260,7 @@ filled should be handled by the supplied CALLBACK function."
   "Extract and return a list containing the existing completion candidates received in COMPLETION-JSON."
   (let* ((json-object-type 'plist)
          (completion-data (json-read-from-string completion-json))
-         (completion-suggestions (coerce (plist-get completion-data :suggestions) 'list)))
+         (completion-suggestions (cl-coerce (plist-get completion-data :suggestions) 'list)))
     completion-suggestions))
 
 (add-to-list 'company-backends 'company-godot-gdscript)

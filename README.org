@@ -504,6 +504,7 @@ on which to ask for completion."
                     (file-relative-name
                      (file-name-nondirectory
                       buffer-file-name) (company-godot-gdscript-find-project-configuration))))
+        (buffer-content (current-buffer))
         ;; TODO: Account for narrowing.
         (cursor-line (1- (line-number-at-pos)))
         (cursor-column (current-column))
@@ -647,7 +648,7 @@ filled should be handled by the supplied CALLBACK function."
   "Extract and return a list containing the existing completion candidates received in COMPLETION-JSON."
   (let* ((json-object-type 'plist)
          (completion-data (json-read-from-string completion-json))
-         (completion-suggestions (coerce (plist-get completion-data :suggestions) 'list)))
+         (completion-suggestions (cl-coerce (plist-get completion-data :suggestions) 'list)))
     completion-suggestions))
 #+END_SRC
 
