@@ -111,6 +111,7 @@ on which to ask for completion."
                      :cursor (:row ,cursor-line :column ,cursor-column)
                      :meta ,meta-content)))))
 
+;; TODO Could use a variable/toggle instead (same for debug version).
 (defun company-godot-gdscript-build-json-request-at-point-verbose ()
   "Gather the required data to create a JSON completion request (verbose).
 
@@ -139,6 +140,7 @@ on which to ask for completion."
                              :cursor (:row ,cursor-line :column ,cursor-column)
                              :meta ,meta-content))))))
 
+;; TODO Could use a variable/toggle instead (same for verbose).
 (defun company-godot-gdscript-build-json-request-at-point-debug-version ()
   "Gather the required data to create a JSON completion request (debug version).
 
