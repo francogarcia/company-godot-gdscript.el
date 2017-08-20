@@ -115,7 +115,7 @@ may also use ~C-M-s~ to filter candidates whilst searching.
 *** Copyright
 
 #+BEGIN_SRC emacs-lisp
-;; Copyright (C) 2016 Franco Eusébio Garcia
+;; Copyright (C) 2016--2017 Franco Eusébio Garcia
 #+END_SRC
 
 *** Author, Version, Keywords

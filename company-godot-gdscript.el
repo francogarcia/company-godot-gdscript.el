@@ -1,6 +1,6 @@
 ;;; company-godot-gdscript.el --- Company back-end for Godot GDScript completion.
 
-;; Copyright (C) 2016 Franco Eusébio Garcia
+;; Copyright (C) 2016--2017 Franco Eusébio Garcia
 
 ;; Author: Franco Eusébio Garcia <francogarcia@protonmail.com>
 ;; URL: https://github.com/francogarcia/godot-gdscript.el
