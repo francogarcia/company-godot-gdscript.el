@@ -1,0 +1,846 @@
+#+TITLE: Emacs Company Auto-Completion for Godot's GDScript
+#+AUTHOR: Franco Eusébio Garcia
+#+EMAIL: francogarcia@protonmail.com
+
+* Introduction
+
+This is the auto-complete companion for [[https://github.com/francogarcia/godot-gdscript.e][Emacs' Godot GDScript major mode]].
+Auto-completion provides completion for variables, functions, node paths, and
+input actions using Company-mode. To use it, however, you need to compile Godot
+from the source code with [[https://github.com/neikeq/gd-autocomplete-service][gd-autocomplete-service]] support, and have Curl
+installed and exported to the system's path. Check [[*Auto-Completion][Auto-Completion]] for more
+information. Currently, it was only tested in Linux.
+
+To add this Company back-end to your Emacs configuration, please see [[*Setting-Up in Emacs][Setting-Up
+in Emacs]].
+
+If you use Yasnippet, check [[https://github.com/francogarcia/yasnippet-godot-gdscript][Yasnippet for Godot GDScript]].
+
+* Setting-Up in Emacs
+
+*NOTE*: At this moment, auto-completion requires Curl (installed and exported to
+the system's path) and was only tested in Linux.
+
+Auto completion requires [[https://company-mode.github.io/][company-mode for Emacs]] and [[https://github.com/neikeq/gd-autocomplete-service][gd-autocomplete-service]].
+Therefore, in order to use auto-completion, it is necessary to compile Godot
+from source code, enabling the =gd-autocomplete-service=. To learn how to use
+custom modules in Godot, check [[http://www.godotengine.org/projects/godot-engine/wiki/Custom_modules_in_C++][Godot Engine - Custom modules in C++]].
+
+To enable auto-completion, first require Company and the Godot-GDScript
+back-end:
+
+#+BEGIN_SRC emacs-lisp
+(require 'company)
+(require 'company-godot-gdscript)
+#+END_SRC
+
+To add the back-end globally to Company, you may use:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(eval-after-load "company"
+  '(progn
+     (add-to-list 'company-backends 'company-godot-gdscript)))
+#+END_SRC
+
+To enable the completion in a buffer, enable Company: ~M-x company-mode~.
+Afterwards, you may request a completion with ~M-x company-complete~.
+
+Should you want to enable completion when the buffer is loaded, you may use:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(add-hook 'godot-gdscript-mode-hook 'company-mode)
+#+END_SRC
+
+Or a custom function, such as:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(add-hook 'godot-gdscript-mode-hook
+          (lambda ()
+            (make-local-variable 'company-backends)
+            (add-to-list 'company-backends 'company-godot-gdscript)
+            (setq-local company-minimum-prefix-length 1)
+            (setq-local company-async-timeout 10)
+            (setq-local company-idle-delay 0.3)
+            (company-mode)
+            (local-set-key (kbd "<f5>") 'company-complete)))
+#+END_SRC
+
+To customize local variables according to your own preferences.
+
+** Searching for Candidates in the Completion
+
+Company allows searching the candidates list by pressing ~C-s~ and typing. You
+may also use ~C-M-s~ to filter candidates whilst searching.
+
+* About this File
+
+** Org-Mode Notes
+
+- Set ~comments~ to ~both~ to ease debugging and exporting Org as comments.
+  + See "Jumping between code and Org" in [[http://orgmode.org/manual/Extracting-source-code.html][Extracting source code - The Org
+    Manual]].
+
+#+BEGIN_SRC org :tangle no
+:PROPERTIES:
+:header-args: :tangle  godot-gdscript-mode.el
+:header-args: :padline yes
+:header-args: :comments both
+:END:
+#+END_SRC
+
+- For version control, however, it is more interesting to disable comments, as
+  it leaves the comments out of the tangled code.
+
+#+BEGIN_SRC org :tangle no
+:PROPERTIES:
+:header-args: :tangle  godot-gdscript-mode.el
+:header-args: :padline yes
+:header-args: :comments no
+:END:
+#+END_SRC
+
+* Code Completion with Company Mode
+:PROPERTIES:
+:header-args: :tangle  company-godot-gdscript.el
+:header-args: :padline yes
+:header-args: :comments no
+:END:
+
+** Header
+
+#+BEGIN_SRC emacs-lisp
+;;; company-godot-gdscript.el --- Company back-end for Godot GDScript completion.
+#+END_SRC
+
+*** Copyright
+
+#+BEGIN_SRC emacs-lisp
+;; Copyright (C) 2016 Franco Eusébio Garcia
+#+END_SRC
+
+*** Author, Version, Keywords
+
+#+BEGIN_SRC emacs-lisp
+;; Author: Franco Eusébio Garcia <francogarcia@protonmail.com>
+;; URL: https://github.com/francogarcia/godot-gdscript.el
+;; Version: 0.0.1
+;; Keywords: godot game engine company
+#+END_SRC
+
+*** License
+
+GNU General Public License version 3.
+
+#+NAME: license
+#+BEGIN_SRC emacs-lisp
+;;; License:
+
+;; This file not shipped as part of GNU Emacs.
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#+END_SRC
+
+*** Commentary
+
+#+BEGIN_SRC emacs-lisp
+;;; Comentary:
+
+;; This is a Company back-end to add auto-completion to Godot-GDScript mode.
+#+END_SRC
+
+*** Dependencies
+
+#+BEGIN_SRC emacs-lisp
+;; Package-Requires: ((company "0.9.0"))
+#+END_SRC
+
+** Group
+
+#+BEGIN_SRC emacs-lisp
+(defgroup company-godot-gdscript nil
+  "Company back-end for Godot Engine GDScript Language completion."
+  ;;:group 'programming
+  :group 'godot-gdscript
+  :version "24.3"
+  :link '(emacs-commentary-link "godot-gdscript"))
+#+END_SRC
+
+** Code
+
+#+BEGIN_SRC emacs-lisp
+;;; Code
+#+END_SRC
+
+** Dependencies --- Loading
+
+#+BEGIN_SRC emacs-lisp
+(require 'cl-lib)
+(require 'company)
+(require 'json)
+#+END_SRC
+
+** Customization
+
+#+BEGIN_SRC emacs-lisp
+(defcustom company-godot-gdscript-curl-path "curl"
+  "Path to curl executable, used to send HTTP requests to GD
+Autocomplete Service."
+  :group 'godot-gdscript
+  :type 'string
+  :safe 'stringp)
+#+END_SRC
+
+** GD Autocomplete Service
+
+- Request:
+  + Path: absolute path of the file;
+  + Text: the current script content;
+  + Cursor: cursor position in the text;
+  + Meta: ignored by the service --- returned in the response.
+
+- Response:
+  + Path: absolute path of the file;
+  + Cursor: cursor position;
+  + Meta: same as the request;
+  + Hint: hint with information regarding the function return type and
+    parameters;
+  + Suggestions: list of completions;
+  + Prefix: prefix string to be replaced with the user's chosen suggestion.
+
+*** COMMENT Exploratory Study                                                        :noexport:
+:PROPERTIES:
+:header-ags: :tangle no
+:END:
+
+This example uses [[https://github.com/zweifisch/ob-http][ob-http]].
+
+**** Obtaining the Project's Checksum
+
+This directory is the one shown by Godot in the Project Manager's Recent
+Projects. Do not add a trailing slash, not the =engine.cfg= file.
+
+#+NAME: PROJECT_MD5
+#+HEADER: :var PROJECT_PATH=(substitute-in-file-name "$HOME/tmp/godot/emacs")
+#+BEGIN_SRC sh
+# echo $PROJECT_PATH
+echo -n $PROJECT_PATH | md5sum | awk '{print $1}'
+#+END_SRC
+
+**** Finding the Port
+
+Compare the checksum with the file =~/.godot/.autocomplete-servers.json= (X11)
+or =$APPDATA\Godot\.autocomplete-servers.json= (Windows) to find out the
+project's communication port.
+
+#+NAME: PROJECT_PORT
+#+HEADER: :var PROJECT_MD5=PROJECT_MD5
+#+HEADER: :var SERVER_LIST_FILE=(substitute-in-file-name "$HOME/.godot/.autocomplete-servers.json")
+#+BEGIN_SRC sh :results verbatim
+# echo $SERVER_LIST_FILE
+# echo $PROJECT_MD5
+grep -Po $PROJECT_MD5'":".*?[^\\]"[,}]' $SERVER_LIST_FILE | awk -F':"' '{print $2}' | awk -F'"' '{print $1}'
+#+END_SRC
+
+**** Sending a Test Request
+
+Lines and columns should start at 0. Thus, the first position in the buffer is
+(0, 0). However, it seems that lines start at 0, and columns at 1.
+
+Change indentation to "\t", new lines by "\n".
+
+#+NAME: GDSCRIPT_CODE
+#+BEGIN_SRC godot-gdscript
+extends Node
+func _ready():
+    print("Hello, world!")
+    get
+#+END_SRC
+
+Although the example says to use the full path, examing the source code of the
+lastest version of GD Autocomplete Service suggests that the path should start
+with Godot's =res://= protocol.
+
+#+NAME: COMPLETION_JSON
+#+HEADER: :var PORT=PROJECT_PORT
+#+HEADER: :var PROJECT_PATH=(substitute-in-file-name "$HOME/tmp/godot/emacs")
+#+BEGIN_SRC http :pretty
+POST http://localhost:${PORT} HTTP/1.1
+Accept: application/json
+Connection: keep-alive
+Content-Type: application/json; charset=UTF-8
+
+{
+    "path": "res://example.gd",
+
+    "text": "extends Node\nfunc _ready():\n\tprint(\"Hello, world!\")\n\tget",
+
+    "cursor": {
+        "row": 3,
+        "column": 4
+    },
+
+    "meta": "Ignored by the service. Returned in the response."
+}
+#+END_SRC
+
+**** Parsing the JSON
+
+Dumping the received information.
+
+#+NAME: COMPLETION_LIST_DUMP
+#+HEADER: :var INPUT=COMPLETION_JSON
+#+BEGIN_SRC emacs-lisp :results output
+(let* ((json-object-type 'plist)
+       (completion-data (json-read-from-string INPUT))
+       (hint (plist-get completion-data :hint))
+       (prefix (plist-get completion-data :prefix))
+       (suggestions (coerce (plist-get completion-data :suggestions) 'list))
+       (suggestion-index 0))
+  (progn
+    (with-temp-buffer
+      (princ (format "Hint: %s\n" hint))
+      (princ (format "Prefix: %s\n" prefix))
+      (princ (format "Elements:\n"))
+      (dolist (suggestion suggestions)
+        (setq suggestion-index (1+ suggestion-index))
+        (princ (format "%d) %s\n" suggestion-index suggestion))))))
+#+END_SRC
+
+**** Returning a List of Possible Completions
+
+This is the list of candidates for auto-completion.
+
+#+NAME: COMPLETION_LIST
+#+HEADER: :var INPUT=COMPLETION_JSON
+#+BEGIN_SRC emacs-lisp :results verbatim
+(let* ((json-object-type 'plist)
+       (completion-data (json-read-from-string INPUT))
+       (suggestions (coerce (plist-get completion-data :suggestions) 'list)))
+  suggestions
+  )
+#+END_SRC
+
+**** Creating a Request for the Completions
+
+***** Using Curl
+
+#+BEGIN_SRC sh :results output
+curl \
+    --data '{"path": "res://example.gd", "text": "extends Node\nfunc _ready():\n\tprint(\"Hello, world!\")\n\tget", "cursor": {"row": 3, "column": 4}, "meta": "Ignored by the service. Returned in the response."}' \
+    --header 'Accept: application/json' \
+    --header 'Connection: keep-alive' \
+    --header 'Content-Type: application/json; charset=UTF-8' \
+    --http1.1 \
+    --request POST http://localhost:6070
+#+END_SRC
+
+***** Curl in Emacs Lisp
+
+Add comma before ~buffer-content~.
+
+#+NAME: COMPLETION_REQUEST
+#+HEADER: :var PROJECT_PATH=(substitute-in-file-name "$HOME/tmp/godot/emacs")
+#+BEGIN_SRC emacs-lisp
+(let ((project-path PROJECT_PATH)
+      (buffer-content (current-buffer))
+      (cursor-line (line-number-at-pos))
+      (cursor-column (current-column))
+      (meta-content "Emacs"))
+(
+  (json-encode `(
+                 :path ,project-path
+                 :text "" ;;,buffer-content
+                 :cursor (:row ,cursor-line :column ,cursor-column)
+                 :meta ,meta-content)))
+#+END_SRC
+
+#+NAME: COMPLETION_JSON_REQUEST
+ #+HEADER: :var PORT=PROJECT_PORT
+ #+HEADER: :var JSON_CONTENT=COMPLETION_REQUEST
+#+BEGIN_SRC emacs-lisp :results output
+;; Adapted from: <https://github.com/deepakg/emacs/blob/master/perlysense/async-shell-command-to-string.el>
+(defun async-shell-command (command buffer-name &optional callback)
+  "Execute shell command COMMAND asynchronously in the
+  background.
+
+Return the temporary output buffer (named BUFFER-NAME), which
+  command is writing to during execution.
+
+If CALLBACK is supplied, it is called with the return value of
+COMMAND passed as a string.
+
+When the command is finished, call CALLBACK with the resulting
+  output as a string.
+
+Synopsis:
+  (async-shell-command-to-string \"echo hello\" \"Hello World\" (lambda (s) (message \"RETURNED (%s)\" s)))
+"
+  (lexical-let ((output-buffer (get-buffer-create buffer-name))
+                (callback-function callback))
+    (set-process-sentinel
+     (start-process
+      "Godot-GDScript Autocomplete"
+      output-buffer
+      shell-file-name
+      ;; Command line arguments for the subprocess.
+      shell-command-switch
+      command)
+     (lambda (process signal)
+       ;; TODO: Handle failure.
+       (when (memq (process-status process) '(exit signal))
+         (if callback-function
+             (with-current-buffer output-buffer
+               (let ((output-string
+                      (buffer-substring-no-properties (point-min) (point-max))))
+                 (funcall callback-function output-string))))
+         (kill-buffer output-buffer))))
+    output-buffer))
+
+(let ((curl-command "curl --data '{\"path\": \"res://example.gd\", \"text\": \"extends Node\nfunc _ready():\n\tprint(\\\"Hello, world!\\\")\n\tget\", \"cursor\": {\"row\": 3, \"column\": 4}, \"meta\": \"Ignored by the service. Returned in the response.\"}' --header 'Accept: application/json' --header 'Connection: keep-alive' --header 'Content-Type: application/json; charset=UTF-8' --http1.1 --request POST http://localhost:6071"))
+  (async-shell-command
+   curl-command
+   "*Godot-GDScript GD-AutoComplete Service*"
+  (lambda (result) (message "Command returned: %s.\n" result))
+  ))
+#+END_SRC
+
+*** Emacs Lisp Implementation
+
+**** Finding the Project Configuration File
+
+#+BEGIN_SRC emacs-lisp
+(defun company-godot-gdscript-find-project-configuration (&optional path)
+  "Returns the path on which Godot's configuration
+  file (\"engine.cfg\") is stored.
+
+If PATH is given, starts searching by it. Otherwise, the search
+starts by the current buffer path."
+  ;; TODO: Handle error when project file does not exist.
+  (let ((base-path (or path default-directory)))
+    (locate-dominating-file base-path
+                            (lambda (parent)
+                              (directory-files parent t "engine.cfg")))))
+#+END_SRC
+
+**** Finding the Correct Port
+
+#+BEGIN_SRC emacs-lisp
+(defun company-godot-gdscript-project-configuration-md5 (&optional path)
+  "Returns the value of the MD5 check-sum of the project's
+  configuration path.
+
+If PATH is given, it is used as the leaf directory to search for
+the configuration file. Otherwise, the search starts by the
+current buffer's directory."
+  ;; TODO: Handle error when project file does not exist.
+  (md5 (directory-file-name
+        (file-truename
+          (company-godot-gdscript-find-project-configuration path)))))
+
+(defun company-godot-gdscript-find-autocomplete-server-port (project-md5)
+  "Find the server port of the GD Auto-Complete service by its
+MD5 value, given by PROJECT-MD5."
+  (let ((auto-complete-server-file "~/.godot/.autocomplete-servers.json"))
+    (with-temp-buffer
+      (insert-file-contents auto-complete-server-file)
+      (let* (
+             (json-object-type 'plist)
+             (json-key-type 'string)
+             (json-array-type 'list)
+             (json-content-list nil)
+             (json-content-list (json-read-from-string
+                                 (buffer-substring-no-properties (point-min) (point-max)))))
+        (lax-plist-get json-content-list project-md5)
+        ))))
+#+END_SRC
+
+**** Curl Request
+
+#+BEGIN_SRC emacs-lisp
+(defun company-godot-gdscript-build-json-request-at-point ()
+  "Gather the required data to send to GD Auto-Complete Service,
+  and pack them all into a JSON string.
+
+The current line and column of the cursor are used as the point
+on which to ask for completion."
+  (let (;;(file-path buffer-file-name)
+        (file-path (concat
+                    "res://"
+                    (file-relative-name
+                     (file-name-nondirectory
+                      buffer-file-name) (company-godot-gdscript-find-project-configuration))))
+        (buffer-content (current-buffer))
+        ;; TODO: Account for narrowing.
+        (cursor-line (1- (line-number-at-pos)))
+        (cursor-column (current-column))
+        (meta-content "Request sent from Emacs Godot GDScript mode."))
+    (with-current-buffer buffer-content
+      (json-encode `(
+                     :path ,file-path
+                     :text ,(buffer-substring-no-properties (point-min) (point-max))
+                     :cursor (:row ,cursor-line :column ,cursor-column)
+                     :meta ,meta-content)))))
+
+(defun company-godot-gdscript-build-json-request-at-point-verbose ()
+  "Gather the required data to send to GD Auto-Complete Service,
+  and pack them all into a JSON string.
+
+The current line and column of the cursor are used as the point
+on which to ask for completion."
+  (let (;;(file-path buffer-file-name)
+        (file-path (concat
+                    "res://"
+                    (file-relative-name
+                     (file-name-nondirectory
+                      buffer-file-name) (company-godot-gdscript-find-project-configuration))))
+        ;; TODO: Account for narrowing.
+        (cursor-line (1- (line-number-at-pos)))
+        (cursor-column (current-column))
+        (meta-content "Request sent from Emacs Godot GDScript mode."))
+    (progn
+      (message "file: %s\nbuffer: %s\nline: %s\tcolumn: %s"
+               file-path buffer-content cursor-line cursor-column)
+      (with-current-buffer buffer-content
+        (json-encode `(
+                       :path ,file-path
+                             :text ,(buffer-substring-no-properties (point-min) (point-max))
+                             :cursor (:row ,cursor-line :column ,cursor-column)
+                             :meta ,meta-content))))))
+
+(defun company-godot-gdscript-build-json-request-at-point-debug-version ()
+  "Gather the required data to send to GD Auto-Complete Service,
+  and pack them all into a JSON string.
+
+The current line and column of the cursor are used as the point
+on which to ask for completion."
+  (let ((file-path "res://example.gd")
+        (buffer-content
+;; "extends Node
+;; func _ready():
+;;     get_node("
+"extends Node
+func _ready():
+    get_node(\""
+)
+        ;; (cursor-line 2)
+        ;; (cursor-column 13)
+        (cursor-line 2)
+        (cursor-column 14)
+        (meta-content "Request sent from Emacs Godot GDScript mode."))
+    (json-encode `(:path ,file-path
+                   :text ,buffer-content
+                   :cursor (:row ,cursor-line :column ,cursor-column)
+                   ;; Include source code here, as it is returned in
+                   ;; response.
+                   :meta ,buffer-content))))
+
+(defun company-godot-gdscript-build-curl-command (url port json-request)
+  "Build the shell command to invocate Curl. URL and PORT specify
+the socket address, and JSON-REQUEST is a string containing the
+data for requesting completion to GD Auto-Complete Service."
+  ;;(let ((data (concat "--data \"" (company-godot-gdscript-escape-gdscript-symbols json-request) "\""))
+  (let ((data (concat "--data-raw \"" (company-godot-gdscript-escape-gdscript-symbols json-request) "\""))
+        (header-accept "--header 'Accept: application/json'")
+        (header-connection "--header 'Connection: keep-alive'")
+        (header-content-type "--header 'Content-Type: application/json; charset=UTF-8'")
+        (http-version "--http1.1")
+        (http-request (concat "--request POST " url ":" port)))
+    (concat company-godot-gdscript-curl-path " "
+            data " "
+            header-accept " "
+            header-connection " "
+            header-content-type " "
+            http-version " "
+            http-request)))
+
+(defun company-godot-gdscript-escape-gdscript-symbols (source)
+  "Escape symbols existing in SOURCE, in order to correcty pass
+string containing shell to shells."
+  ;; `json-enconde-string' escapes the string's literal quotes as well, so we
+  ;; remove them using substring to remove the first and last 2 characters
+  ;; (which contains '\"' on both extremes).
+  (substring (json-encode-string source) 1 -1))
+
+;; Adapted from: <https://github.com/deepakg/emacs/blob/master/perlysense/async-shell-command-to-string.el>
+(defun company-godot-gdscript-async-shell-command (command buffer-name &optional callback)
+  "Execute shell command COMMAND asynchronously in the
+  background.
+
+Return the temporary output buffer (named BUFFER-NAME), which
+  command is writing to during execution.
+
+If CALLBACK is supplied, it is called with the return value of
+COMMAND passed as a string.
+
+When the command is finished, call CALLBACK with the resulting
+  output as a string.
+
+Synopsis:
+  (company-godot-async-shell-command-to-string \"echo hello\" \"Hello World\" (lambda (s) (message \"RETURNED (%s)\" s)))
+"
+  (lexical-let ((output-buffer (get-buffer-create buffer-name))
+                (callback-function callback))
+    (set-process-sentinel
+     (start-process
+      "Godot-GDScript Autocomplete"
+      output-buffer
+      shell-file-name
+      ;; Command line arguments for the subprocess.
+      shell-command-switch
+      command)
+     (lambda (process signal)
+       ;; TODO: Handle failure.
+       (when (memq (process-status process) '(exit signal))
+         (if callback-function
+             (with-current-buffer output-buffer
+               (let ((output-string
+                      (buffer-substring-no-properties (point-min) (point-max))))
+                 (funcall callback-function output-string))))
+         (kill-buffer output-buffer))))
+    output-buffer))
+#+END_SRC
+
+**** Request Completion at Point
+
+#+BEGIN_SRC emacs-lisp
+(defun company-godot-gdscript-process-request-completion-at-point (callback)
+  "Build and send the request for completion at the current point in buffer.
+
+The request returns a JSON file containing the hint, suggestions,
+and prefix offered by GD Auto-Complete Service, if any. The JSON
+filled should be handled by the supplied CALLBACK function."
+  (company-godot-gdscript-async-shell-command
+   (company-godot-gdscript-build-curl-command "http://localhost"
+                                              (company-godot-gdscript-find-autocomplete-server-port
+                                               (company-godot-gdscript-project-configuration-md5 default-directory))
+                                              (company-godot-gdscript-build-json-request-at-point))
+   "*Godot-GDScript GD-AutoComplete Service*"
+   callback))
+#+END_SRC
+
+**** Extract Data for Completion
+
+#+BEGIN_SRC emacs-lisp
+(defun company-godot-gdscript-mode-extract-completion-hint-from-json (completion-json)
+  "Extract and return a string containing the hint field of the
+received in COMPLETION-JSON."
+  (let* ((json-object-type 'plist)
+         (completion-data (json-read-from-string completion-json))
+         (completion-hint (plist-get completion-data :hint)))
+    completion-hint))
+
+(defun company-godot-gdscript-mode-extract-completion-prefix-from-json (completion-json)
+  "Extract and return the string containg prefix field of the
+received in COMPLETION-JSON."
+  (let* ((json-object-type 'plist)
+         (completion-data (json-read-from-string completion-json))
+         (completion-prefix (plist-get completion-data :prefix)))
+    completion-prefix))
+
+(defun company-godot-gdscript-mode-extract-completion-suggestions-from-json (completion-json)
+  "Extract and return a list containing the existing completion
+candidates received in COMPLETION-JSON."
+  (let* ((json-object-type 'plist)
+         (completion-data (json-read-from-string completion-json))
+         (completion-suggestions (coerce (plist-get completion-data :suggestions) 'list)))
+    completion-suggestions))
+#+END_SRC
+
+**** Testing                                                                :noexport:
+:PROPERTIES:
+:header-args: :tangle no
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(company-godot-gdscript-find-project-configuration "/home/franco/tmp/godot/emacs/")
+
+(company-godot-gdscript-project-configuration-md5 "/home/franco/tmp/godot/emacs/")
+
+(company-godot-gdscript-find-autocomplete-server-port
+ (company-godot-gdscript-project-configuration-md5 "/home/franco/tmp/godot/emacs/"))
+
+(company-godot-gdscript-build-json-request-at-point)
+
+;; (let ((curl-command "curl --data '{\"path\": \"/home/franco/tmp/godot/emacs/example.gd\", \"text\": \"extends Node\nfunc _ready():\n\tprint(\\\"Hello, world!\\\")\n\tget\", \"cursor\": {\"row\": 3, \"column\": 4}, \"meta\": \"Ignored by the service. Returned in the response.\"}' --header 'Accept: application/json' --header 'Connection: keep-alive' --header 'Content-Type: application/json; charset=UTF-8' --http1.1 --request POST http://localhost:6071"))
+;;   (company-godot-gdscript-async-shell-command
+;;    curl-command
+;;    "*Godot-GDScript GD-AutoComplete Service*"
+;;   (lambda (result) (message "Command returned: %s.\n" result))
+;;   ))
+
+(company-godot-gdscript-escape-gdscript-symbols
+ "extends Node\nfunc _ready():\n    print(\"Hello, world!\n\")\n    get")
+
+(company-godot-gdscript-escape-gdscript-symbols
+ "extends Node
+func _ready():
+    print(\"Hello, world!\n\")
+    get")
+
+(company-godot-gdscript-build-curl-command "http://localhost"
+                                   (company-godot-gdscript-find-autocomplete-server-port
+                                    (company-godot-gdscript-project-configuration-md5 "/home/franco/tmp/godot/emacs/"))
+                                   (company-godot-gdscript-build-json-request-at-point))
+
+;; Complete version.
+(company-godot-gdscript-async-shell-command
+ (company-godot-gdscript-build-curl-command "http://localhost"
+                                   (company-godot-gdscript-find-autocomplete-server-port
+                                    (company-godot-gdscript-project-configuration-md5 "/home/franco/tmp/godot/emacs/"))
+                                   (company-godot-gdscript-build-json-request-at-point))
+   "*Godot-GDScript GD-AutoComplete Service*"
+  (lambda (result) (message "Command returned: %s.\n" result)))
+
+;; Debug version (of the complete version): uses fake file, line, column.
+(company-godot-gdscript-async-shell-command
+ (company-godot-gdscript-build-curl-command "http://localhost"
+                                            (company-godot-gdscript-find-autocomplete-server-port
+                                             (company-godot-gdscript-project-configuration-md5 "/home/franco/tmp/godot/emacs/"))
+                                            (company-godot-gdscript-build-json-request-at-point-debug-version))
+ "*Godot-GDScript GD-AutoComplete Service*"
+ (lambda (result)
+   (message "Command returned: %s %s %s %s.\n" ;; Change to %S %S %S to see raw data.
+            result
+            (company-godot-gdscript-mode-extract-completion-hint-from-json result)
+            (company-godot-gdscript-mode-extract-completion-prefix-from-json result)
+            (company-godot-gdscript-mode-extract-completion-suggestions-from-json result)
+            )))
+
+;; Function with complete version.
+(company-godot-gdscript-process-request-completion-at-point
+ (lambda (result)
+   (message "Command returned: %s %s %s.\n" ;; Change to %S %S %S to see raw data.
+            (company-godot-gdscript-mode-extract-completion-hint-from-json result)
+            (company-godot-gdscript-mode-extract-completion-prefix-from-json result)
+            (company-godot-gdscript-mode-extract-completion-suggestions-from-json result)
+            )))
+#+END_SRC
+
+#+BEGIN_SRC godot-gdscript
+# (local-set-key (kbd "<f5>") 'company-complete)
+# (setq company-async-timeout 10)
+# (add-to-list 'company-backends 'company-godot-gdscript)
+# (company-mode)
+
+extends Node
+func _ready():
+    print("Hello, world!")
+    pr
+#+END_SRC
+
+** Company Back-End
+
+Testing Company mode: use ~M-x company-mode~ to enable the minor mode. Then, in
+the GDScript buffer, either run ~M-x company-godot-gdscript~ after a symbol to
+complete, or evaluate:
+
+#+BEGIN_SRC emacs-lisp
+(add-to-list 'company-backends 'company-godot-gdscript)
+#+END_SRC
+
+Then use ~M-x company-complete~.
+
+#+BEGIN_SRC emacs-lisp
+(defun company-godot-gdscript-grab-symbol-before-quotes ()
+  "Return the symbol before opening quotes, to search for path
+  completions (such as node paths for the scene tree) inside
+  Godot."
+  ;; (company-grab-line "get_node(\\\"")
+  ;; (company-grab-symbol)
+  ;; Send an opening quote to search for candidates.
+  (concat "\"" (company-grab-symbol))
+  )
+
+(defun company-godot-gdscript-prefix ()
+  "Handle Company's prefix command case.
+
+Only complete symbols when the current major mode is
+Godot-GDScript.
+
+For strings, it allows completion of code using this back-end and
+any other Company back-ends.
+
+For GDScript, if there is no symbol, it aborts the completion."
+  (when (eq major-mode 'godot-gdscript-mode)
+    (if (not (company-in-string-or-comment))
+        ;; Handle source code.
+        (or (company-grab-symbol) 'stop)
+      ;; Handle strings, as they might be a call such as get_node(). Also allow
+      ;; other back-ends to complete the string or comment.
+      (or (company-godot-gdscript-grab-symbol-before-quotes) 'nil))))
+
+(defun company-godot-gdscript-candidates (callback)
+  "Look for possible completion candidates for completion at
+point, then updates Company list of candidates by calling
+CALLBACK."
+  (lexical-let ((callback-function callback))
+   (company-godot-gdscript-process-request-completion-at-point
+    (lambda (result)
+      (funcall callback-function
+               (company-godot-gdscript-mode-extract-completion-suggestions-from-json
+                result))))))
+
+(defun company-godot-gdscript-post-completion ()
+  "Tweak the results of the completions."
+  (save-excursion
+    ;; Remove two double quotes in a row, if exists.
+    (backward-char)
+    (if (search-forward-regexp "\"\"" nil t)
+        (replace-match "\"" t nil))))
+
+;;;###autoload
+(defun company-godot-gdscript (command &optional arg &rest ignored)
+  "Godot-GDScript backend for company-mode.
+
+See `company-backends' for more information regarding COMMAND and
+ARG."
+  (interactive (list 'interactive))
+  (cl-case command
+    (interactive (company-begin-backend 'company-godot-gdscript))
+    (prefix (company-godot-gdscript-prefix))
+    (candidates (cons :async
+                      (lambda (company-async-callback)
+                        (company-godot-gdscript-candidates
+                         company-async-callback))))
+    (post-completion (company-godot-gdscript-post-completion))
+    (sorted t)))
+#+END_SRC
+
+** Clean-Up
+
+#+NAME: clean_up
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
+** Provide the Module
+
+#+NAME: provide
+#+BEGIN_SRC emacs-lisp
+(provide 'company-godot-gdscript)
+#+END_SRC
+
+** Local Variables
+
+#+BEGIN_SRC emacs-lisp
+;; Local Variables:
+;; coding: utf-8
+;; indent-tabs-mode: nil
+;; End:
+#+END_SRC
+
+** End
+
+#+BEGIN_SRC emacs-lisp
+;;; company-godot-gdscript.el ends here
+#+END_SRC
