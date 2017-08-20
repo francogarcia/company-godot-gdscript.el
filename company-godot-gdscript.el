@@ -24,7 +24,7 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;;; Comentary:
+;;; Commentary:
 
 ;; This is a Company back-end to add auto-completion to Godot-GDScript mode.
 
@@ -37,22 +37,20 @@
   :version "24.3"
   :link '(emacs-commentary-link "godot-gdscript"))
 
-;;; Code
+;;; Code:
 
 (require 'cl-lib)
 (require 'company)
 (require 'json)
 
 (defcustom company-godot-gdscript-curl-path "curl"
-  "Path to curl executable, used to send HTTP requests to GD
-Autocomplete Service."
+  "Path to curl executable, used to send HTTP requests to GD Autocomplete Service."
   :group 'godot-gdscript
   :type 'string
   :safe 'stringp)
 
 (defun company-godot-gdscript-find-project-configuration (&optional path)
-  "Returns the path on which Godot's configuration
-  file (\"engine.cfg\") is stored.
+  "Return the path where Godot's configuration File (\"Engine.cfg\") is stored.
 
 If PATH is given, starts searching by it. Otherwise, the search
 starts by the current buffer path."
@@ -63,8 +61,7 @@ starts by the current buffer path."
                               (directory-files parent t "engine.cfg")))))
 
 (defun company-godot-gdscript-project-configuration-md5 (&optional path)
-  "Returns the value of the MD5 check-sum of the project's
-  configuration path.
+  "Return the value of the MD5 check-sum of the project's configuration path.
 
 If PATH is given, it is used as the leaf directory to search for
 the configuration file. Otherwise, the search starts by the
@@ -75,8 +72,7 @@ current buffer's directory."
           (company-godot-gdscript-find-project-configuration path)))))
 
 (defun company-godot-gdscript-find-autocomplete-server-port (project-md5)
-  "Find the server port of the GD Auto-Complete service by its
-MD5 value, given by PROJECT-MD5."
+  "Find the server port of the GD Auto-Complete service by its MD5 value, given by PROJECT-MD5."
   (let ((auto-complete-server-file "~/.godot/.autocomplete-servers.json"))
     (with-temp-buffer
       (insert-file-contents auto-complete-server-file)
@@ -91,9 +87,10 @@ MD5 value, given by PROJECT-MD5."
         ))))
 
 (defun company-godot-gdscript-build-json-request-at-point ()
-  "Gather the required data to send to GD Auto-Complete Service,
-  and pack them all into a JSON string.
+  "Gather the required data to create a JSON completion request.
 
+Gather the required data to send to GD Auto-Complete Service, and
+pack them all into a JSON string.
 The current line and column of the cursor are used as the point
 on which to ask for completion."
   (let (;;(file-path buffer-file-name)
@@ -115,9 +112,10 @@ on which to ask for completion."
                      :meta ,meta-content)))))
 
 (defun company-godot-gdscript-build-json-request-at-point-verbose ()
-  "Gather the required data to send to GD Auto-Complete Service,
-  and pack them all into a JSON string.
+  "Gather the required data to create a JSON completion request (verbose).
 
+Gather the required data to send to GD Auto-Complete Service, and
+pack them all into a JSON string.
 The current line and column of the cursor are used as the point
 on which to ask for completion."
   (let (;;(file-path buffer-file-name)
@@ -141,9 +139,10 @@ on which to ask for completion."
                              :meta ,meta-content))))))
 
 (defun company-godot-gdscript-build-json-request-at-point-debug-version ()
-  "Gather the required data to send to GD Auto-Complete Service,
-  and pack them all into a JSON string.
+  "Gather the required data to create a JSON completion request (debug version).
 
+Gather the required data to send to GD Auto-Complete Service, and
+pack them all into a JSON string.
 The current line and column of the cursor are used as the point
 on which to ask for completion."
   (let ((file-path "res://example.gd")
@@ -168,9 +167,7 @@ func _ready():
                    :meta ,buffer-content))))
 
 (defun company-godot-gdscript-build-curl-command (url port json-request)
-  "Build the shell command to invocate Curl. URL and PORT specify
-the socket address, and JSON-REQUEST is a string containing the
-data for requesting completion to GD Auto-Complete Service."
+  "Build the shell command to invocate Curl. URL and PORT specify the socket address, and JSON-REQUEST is a string containing the data for requesting completion to GD Auto-Complete Service."
   ;;(let ((data (concat "--data \"" (company-godot-gdscript-escape-gdscript-symbols json-request) "\""))
   (let ((data (concat "--data-raw \"" (company-godot-gdscript-escape-gdscript-symbols json-request) "\""))
         (header-accept "--header 'Accept: application/json'")
@@ -187,8 +184,7 @@ data for requesting completion to GD Auto-Complete Service."
             http-request)))
 
 (defun company-godot-gdscript-escape-gdscript-symbols (source)
-  "Escape symbols existing in SOURCE, in order to correcty pass
-string containing shell to shells."
+  "Escape symbols existing in SOURCE, in order to correcty pass string containing shell to shells."
   ;; `json-enconde-string' escapes the string's literal quotes as well, so we
   ;; remove them using substring to remove the first and last 2 characters
   ;; (which contains '\"' on both extremes).
@@ -196,8 +192,7 @@ string containing shell to shells."
 
 ;; Adapted from: <https://github.com/deepakg/emacs/blob/master/perlysense/async-shell-command-to-string.el>
 (defun company-godot-gdscript-async-shell-command (command buffer-name &optional callback)
-  "Execute shell command COMMAND asynchronously in the
-  background.
+  "Execute shell command COMMAND asynchronously in the background.
 
 Return the temporary output buffer (named BUFFER-NAME), which
   command is writing to during execution.
@@ -209,8 +204,8 @@ When the command is finished, call CALLBACK with the resulting
   output as a string.
 
 Synopsis:
-  (company-godot-async-shell-command-to-string \"echo hello\" \"Hello World\" (lambda (s) (message \"RETURNED (%s)\" s)))
-"
+  (company-godot-async-shell-command-to-string
+   \"echo hello\" \"Hello World\" (lambda (s) (message \"RETURNED (%s)\" s)))"
   (lexical-let ((output-buffer (get-buffer-create buffer-name))
                 (callback-function callback))
     (set-process-sentinel
@@ -247,24 +242,21 @@ filled should be handled by the supplied CALLBACK function."
    callback))
 
 (defun company-godot-gdscript-mode-extract-completion-hint-from-json (completion-json)
-  "Extract and return a string containing the hint field of the
-received in COMPLETION-JSON."
+  "Extract and return a string containing the hint field of the received in COMPLETION-JSON."
   (let* ((json-object-type 'plist)
          (completion-data (json-read-from-string completion-json))
          (completion-hint (plist-get completion-data :hint)))
     completion-hint))
 
 (defun company-godot-gdscript-mode-extract-completion-prefix-from-json (completion-json)
-  "Extract and return the string containg prefix field of the
-received in COMPLETION-JSON."
+  "Extract and return the string containg prefix field of the received in COMPLETION-JSON."
   (let* ((json-object-type 'plist)
          (completion-data (json-read-from-string completion-json))
          (completion-prefix (plist-get completion-data :prefix)))
     completion-prefix))
 
 (defun company-godot-gdscript-mode-extract-completion-suggestions-from-json (completion-json)
-  "Extract and return a list containing the existing completion
-candidates received in COMPLETION-JSON."
+  "Extract and return a list containing the existing completion candidates received in COMPLETION-JSON."
   (let* ((json-object-type 'plist)
          (completion-data (json-read-from-string completion-json))
          (completion-suggestions (coerce (plist-get completion-data :suggestions) 'list)))
@@ -273,9 +265,7 @@ candidates received in COMPLETION-JSON."
 (add-to-list 'company-backends 'company-godot-gdscript)
 
 (defun company-godot-gdscript-grab-symbol-before-quotes ()
-  "Return the symbol before opening quotes, to search for path
-  completions (such as node paths for the scene tree) inside
-  Godot."
+  "Return the symbol before opening quotes, to search for path completions (such as node paths for the scene tree) inside Godot."
   ;; (company-grab-line "get_node(\\\"")
   ;; (company-grab-symbol)
   ;; Send an opening quote to search for candidates.
@@ -301,9 +291,7 @@ For GDScript, if there is no symbol, it aborts the completion."
       (or (company-godot-gdscript-grab-symbol-before-quotes) 'nil))))
 
 (defun company-godot-gdscript-candidates (callback)
-  "Look for possible completion candidates for completion at
-point, then updates Company list of candidates by calling
-CALLBACK."
+  "Look for possible completion candidates for completion at point, then update Company list of candidates by calling CALLBACK."
   (lexical-let ((callback-function callback))
    (company-godot-gdscript-process-request-completion-at-point
     (lambda (result)
@@ -321,10 +309,10 @@ CALLBACK."
 
 ;;;###autoload
 (defun company-godot-gdscript (command &optional arg &rest ignored)
-  "Godot-GDScript backend for company-mode.
+  "Godot-GDScript backend for function `company-mode'.
 
 See `company-backends' for more information regarding COMMAND and
-ARG."
+ARG. IGNORED is not used."
   (interactive (list 'interactive))
   (cl-case command
     (interactive (company-begin-backend 'company-godot-gdscript))
