@@ -5,7 +5,7 @@
 ;; Author: Franco Eusébio Garcia <francogarcia@protonmail.com>
 ;; URL: https://github.com/francogarcia/company-godot-gdscript.el
 ;; Version: 0.0.1
-;; Keywords: godot game engine company
+;; Keywords: abbrev convenience matching
 
 ;;; License:
 

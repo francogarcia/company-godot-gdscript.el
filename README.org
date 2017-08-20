@@ -109,7 +109,7 @@ may also use ~C-M-s~ to filter candidates whilst searching.
 ** Header
 
 #+BEGIN_SRC emacs-lisp
-;;; company-godot-gdscript.el --- Company back-end for Godot GDScript completion.
+;;; company-godot-gdscript.el --- Company back-end for Godot GDScript completion
 #+END_SRC
 
 *** Copyright
@@ -120,11 +120,13 @@ may also use ~C-M-s~ to filter candidates whilst searching.
 
 *** Author, Version, Keywords
 
+Possible keywords are described in the variable ~finder-known-keywords~.
+
 #+BEGIN_SRC emacs-lisp
 ;; Author: Franco Eusébio Garcia <francogarcia@protonmail.com>
 ;; URL: https://github.com/francogarcia/company-godot-gdscript.el
 ;; Version: 0.0.1
-;; Keywords: godot game engine company
+;; Keywords: abbrev convenience matching
 #+END_SRC
 
 *** License
